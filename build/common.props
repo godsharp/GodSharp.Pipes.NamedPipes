@@ -1,0 +1,22 @@
+﻿<Project>
+
+  <Import Project=".\version.props" />
+  
+  <PropertyGroup>
+    <RootNamespace>GodSharp.Pipes.NamedPipes</RootNamespace>
+    <TargetFrameworks>net40;net45;net46;netstandard2.0;netcoreapp2.0;netcoreapp3.0;</TargetFrameworks>
+    <Company>GodSharp</Company>
+    <Authors>seayxu</Authors>
+    <RepositoryType>git</RepositoryType>
+    <PackageIconUrl>https://avatars3.githubusercontent.com/u/26563296</PackageIconUrl>
+    <PackageLicenseUrl></PackageLicenseUrl>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <Copyright>Copyright © GodSharp 2019</Copyright>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <OutputPath>$(SolutionDir)\output\$(AssemblyName)</OutputPath>
+    <DocumentationFile>$(SolutionDir)\output\$(AssemblyName)\$(TargetFramework)\$(AssemblyName).xml</DocumentationFile>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+  
+  <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
+</Project>
