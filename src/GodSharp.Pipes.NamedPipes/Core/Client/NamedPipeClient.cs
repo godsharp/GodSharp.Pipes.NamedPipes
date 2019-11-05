@@ -45,6 +45,8 @@ namespace GodSharp.Pipes.NamedPipes
                 OutputLogger?.Invoke($"{GetOutputPrefix()} connected.");
 
                 WaitForRead();
+
+                OnWaitForConnectionCompleted?.Invoke(new NamedPipeConnectionArgs(Guid, Instance, PipeName, null, buffer: null));
             };
 
 #if NET40 || NET45
