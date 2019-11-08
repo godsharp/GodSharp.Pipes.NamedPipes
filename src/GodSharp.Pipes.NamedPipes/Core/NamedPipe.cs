@@ -3,20 +3,22 @@ using System.IO.Pipes;
 
 namespace GodSharp.Pipes.NamedPipes
 {
-    public abstract class NamedPipe<TPipe> where TPipe : PipeStream
+    public abstract class NamedPipe<TPipe,TArgs>: IDisposable where TPipe : PipeStream
+        where TArgs:ConnectionArgs
     {
         public int ReadBytesSize { get; protected set; } = 1024 * 1024;
         public string PipeName { get; protected set; }
         public Guid Guid { get; protected set; }
         public TPipe Instance { get; protected set; }
-        public bool IsConnected => Instance.IsConnected;
+        public bool IsConnected => Instance?.IsConnected == true;
 
-        public Action<NamedPipeConnectionArgs> OnWaitForConnectionCompleted { get; protected set; }
-        public Action<NamedPipeConnectionArgs> OnStopCompleted { get; protected set; }
-        public Action<NamedPipeConnectionArgs> OnReadCompleted { get; protected set; }
-        public Action<NamedPipeConnectionArgs> OnException { get; protected set; }
+        public Action<TArgs> OnWaitForConnectionCompleted { get; protected set; }
+        public Action<TArgs> OnStopCompleted { get; protected set; }
+        public Action<TArgs> OnReadCompleted { get; protected set; }
+        public Action<TArgs> OnException { get; protected set; }
         public Action<string> OutputLogger { get; protected set; }
 
+        protected bool Interacted = false;
         protected bool Running = false;
         protected bool Stopping = false;
         protected bool Initialized = false;
@@ -32,7 +34,7 @@ namespace GodSharp.Pipes.NamedPipes
 
         protected void VaildInitialized()
         {
-            if (!Initialized) throw new InvalidOperationException("his instance not initialized, you should new instance with options paramters or call Initialize() first.");
+            if (!Initialized) throw new InvalidOperationException("this instance not initialized, you should new instance with options paramters or call Initialize() first.");
         }
 
         public void Start()
@@ -54,23 +56,30 @@ namespace GodSharp.Pipes.NamedPipes
                 if (Stopping) return;
 
                 Instance.Close();
+                Interacted = false;
                 Stopping = true;
                 OutputLogger?.Invoke($"{GetOutputPrefix()} stopped.");
-                OnStopCompleted?.Invoke(new NamedPipeConnectionArgs(Guid, Instance, PipeName, null, buffer: null));
+                OnStopHandler();
                 Running = false; 
             }
         }
 
-        protected virtual string GetOutputPrefix() => $"{InstanceType} {Guid} / {PipeName}";
+        internal protected virtual string GetOutputPrefix() => $"{InstanceType} {Guid} / {PipeName}";
 
-        protected abstract void WaitForConnection();
+        internal protected abstract void WaitForConnection();
+        internal protected abstract void OnStopHandler();
+        internal protected abstract void OnReadCompletedHandler(byte[] buffer);
+        internal protected abstract void OnExceptionHandler(Exception exception);
 
-        public void Write(byte[] buffer)
+        public void Write(byte[] buffer) => WriteInternal(buffer, false);
+
+        internal protected void WriteInternal(byte[] buffer,bool flag)
         {
             VaildInitialized();
 
             if (buffer == null || buffer.Length == 0) return;
             if (!Instance.IsConnected) return;
+            if (!Interacted && !flag) return;
 
             try
             {
@@ -79,26 +88,26 @@ namespace GodSharp.Pipes.NamedPipes
             }
             catch (Exception ex)
             {
-                OnException?.Invoke(new NamedPipeConnectionArgs(Guid, Instance, PipeName, null, exception: ex));
+                OnExceptionHandler(ex);
             }
         }
-        
-        protected void WaitForRead()
-        {
-            Running = true;
 
+        internal protected void WaitForReadInternal(AsyncCallback callback)
+        {
             try
             {
                 OutputLogger?.Invoke($"{GetOutputPrefix()} begin to read.");
 
                 byte[] buffer = new byte[ReadBytesSize];
-                Instance.BeginRead(buffer, 0, buffer.Length, WaitForReadHandler, buffer);
+                Instance.BeginRead(buffer, 0, buffer.Length, callback, buffer);
             }
             catch (Exception ex)
             {
-                OnException?.Invoke(new NamedPipeConnectionArgs(Guid, Instance, PipeName, null, exception: ex));
+                OnExceptionHandler(ex);
             }
         }
+
+        protected void WaitForRead() => WaitForReadInternal(WaitForReadHandler);
 
         protected void WaitForReadHandler(IAsyncResult result)
         {
@@ -123,15 +132,52 @@ namespace GodSharp.Pipes.NamedPipes
 
                     OutputLogger?.Invoke($"{GetOutputPrefix()} read data {length} bytes.");
 
-                    OnReadCompleted?.Invoke(new NamedPipeConnectionArgs(Guid, Instance, PipeName, null, buffer: tmp)); /**/
+                    OnReadCompletedHandler(tmp);
                 }
 
                 WaitForRead();
             }
             catch (Exception ex)
             {
-                OnException?.Invoke(new NamedPipeConnectionArgs(Guid, Instance, PipeName, null, exception: ex));
+                OnExceptionHandler(ex);
             }
         }
+
+        #region IDisposable Support
+        private bool disposedValue = false; // To detect redundant calls
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    if (Instance?.IsConnected == true && !Stopping) Stop();
+                    // TODO: dispose managed state (managed objects).
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
+                // TODO: set large fields to null.
+
+                disposedValue = true;
+            }
+        }
+
+        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
+        // ~NamedPipe()
+        // {
+        //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+        //   Dispose(false);
+        // }
+
+        // This code added to correctly implement the disposable pattern.
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            Dispose(true);
+            // TODO: uncomment the following line if the finalizer is overridden above.
+            // GC.SuppressFinalize(this);
+        }
+        #endregion
     }
 }

@@ -2,7 +2,7 @@
 
 namespace GodSharp.Pipes.NamedPipes
 {
-    public class NamedPipeClientOptions : NamedPipeOptions
+    public class NamedPipeClientOptions : NamedPipeOptions<ClientConnectionArgs>
     {
         public int ConnectionTimeout { get; set; } = 5000;
         public string PipeServer { get; set; }
@@ -11,7 +11,7 @@ namespace GodSharp.Pipes.NamedPipes
         {
         }
 
-        public NamedPipeClientOptions(string pipeName, Action<NamedPipeConnectionArgs> onReadCompleted, Action<NamedPipeConnectionArgs> onWaitForConnectionCompleted, Action<NamedPipeConnectionArgs> onStopCompleted, Action<NamedPipeConnectionArgs> onException, Action<string> outputLogger, int readBytesSize = 1024 * 1024, int connectionTimeout = 5000, string pipeServer = ".") : base(pipeName, onReadCompleted, onWaitForConnectionCompleted, onStopCompleted, onException,outputLogger, readBytesSize)
+        public NamedPipeClientOptions(string pipeName, Action<ClientConnectionArgs> onReadCompleted, Action<ClientConnectionArgs> onWaitForConnectionCompleted, Action<ClientConnectionArgs> onInteractionCompleted, Action<ClientConnectionArgs> onStopCompleted, Action<ClientConnectionArgs> onException, Action<string> outputLogger, int readBytesSize = 1024 * 1024, int connectionTimeout = 5000, string pipeServer = ".") : base(pipeName, onReadCompleted, onWaitForConnectionCompleted, onInteractionCompleted, onStopCompleted, onException, outputLogger, readBytesSize)
         {
             ConnectionTimeout = connectionTimeout;
             PipeServer = pipeServer ?? throw new ArgumentNullException(nameof(pipeServer));

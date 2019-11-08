@@ -4,13 +4,14 @@ using System.Text;
 
 namespace GodSharp.Pipes.NamedPipes
 {
-    public class NamedPipeServer
+    public class NamedPipeServer:IDisposable
     {
         ConcurrentDictionary<Guid, NamedPipeMaster> masters = new ConcurrentDictionary<Guid, NamedPipeMaster>();
         NamedPipeMaster master = null;
 
         public string PipeName => Options.PipeName;
         public int MaxNumberOfServerInstances => Options.MaxNumberOfServerInstances;
+        public ConcurrentDictionary<Guid, NamedPipeMaster> Masters => masters;
 
         public NamedPipeServerOptions Options { get; private set; }
 
@@ -28,7 +29,7 @@ namespace GodSharp.Pipes.NamedPipes
             if (Options.OnWaitForConnectionCompleted == null) Options.OnWaitForConnectionCompleted = NamedPipeConnected;
             else Options.OnWaitForConnectionCompleted += NamedPipeConnected;
 
-            Action<NamedPipeConnectionArgs> stopped = (args) => NamedPipeRemove(args.Guid);
+            Action<MasterConnectionArgs> stopped = (args) => NamedPipeRemove(args.Guid);
             if (Options.OnStopCompleted == null) Options.OnStopCompleted = stopped;
             else Options.OnStopCompleted += stopped;
         }
@@ -71,7 +72,7 @@ namespace GodSharp.Pipes.NamedPipes
             }
         }
 
-        private void NamedPipeConnected(NamedPipeConnectionArgs args)
+        private void NamedPipeConnected(MasterConnectionArgs args)
         {
             masters.TryAdd(master.Guid, master);
 
@@ -115,7 +116,44 @@ namespace GodSharp.Pipes.NamedPipes
                 builder.AppendLine($"{index++,3}\t{item}");
             }
 
-            Console.WriteLine(builder.ToString());
+            Options.OutputLogger?.Invoke(builder.ToString());
         }
+
+        #region IDisposable Support
+        private bool disposedValue = false; // To detect redundant calls
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    // TODO: dispose managed state (managed objects).
+                    Stop();
+                }
+
+                // TODO: free unmanaged resources (unmanaged objects) and override a finalizer below.
+                // TODO: set large fields to null.
+
+                disposedValue = true;
+            }
+        }
+
+        // TODO: override a finalizer only if Dispose(bool disposing) above has code to free unmanaged resources.
+        // ~NamedPipeServer()
+        // {
+        //   // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+        //   Dispose(false);
+        // }
+
+        // This code added to correctly implement the disposable pattern.
+        public void Dispose()
+        {
+            // Do not change this code. Put cleanup code in Dispose(bool disposing) above.
+            Dispose(true);
+            // TODO: uncomment the following line if the finalizer is overridden above.
+            // GC.SuppressFinalize(this);
+        }
+        #endregion
     }
 }

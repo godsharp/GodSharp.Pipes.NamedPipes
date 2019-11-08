@@ -4,7 +4,7 @@ using System.Security.Principal;
 
 namespace GodSharp.Pipes.NamedPipes
 {
-    public class NamedPipeClient : NamedPipe<NamedPipeClientStream>
+    public class NamedPipeClient : NamedPipe<NamedPipeClientStream,ClientConnectionArgs>
     {
         public int ConnectionTimeout { get; private set; } = 5000;
         public string PipeServer { get; private set; }
@@ -32,9 +32,24 @@ namespace GodSharp.Pipes.NamedPipes
             Initialized = true;
         }
 
-        protected override string GetOutputPrefix() => $"{base.GetOutputPrefix()} / {PipeServer}";
+        internal protected override string GetOutputPrefix() => $"{base.GetOutputPrefix()} / {PipeServer}";
 
-        protected override void WaitForConnection()
+        protected internal override void OnStopHandler()
+        {
+            OnStopCompleted?.Invoke(new ClientConnectionArgs(Guid, Instance, PipeName, PipeServer, buffer: null));
+        }
+
+        protected internal override void OnReadCompletedHandler(byte[] buffer)
+        {
+            OnReadCompleted?.Invoke(new ClientConnectionArgs(Guid, Instance, PipeName, PipeServer, buffer: buffer));
+        }
+
+        protected internal override void OnExceptionHandler(Exception exception)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal protected override void WaitForConnection()
         {
             OutputLogger?.Invoke($"{GetOutputPrefix()} connecting to server.");
 
@@ -44,9 +59,11 @@ namespace GodSharp.Pipes.NamedPipes
 
                 OutputLogger?.Invoke($"{GetOutputPrefix()} connected.");
 
-                WaitForRead();
+                //WaitForRead();
 
-                OnWaitForConnectionCompleted?.Invoke(new NamedPipeConnectionArgs(Guid, Instance, PipeName, null, buffer: null));
+                WaitInteraction();
+
+                OnWaitForConnectionCompleted?.Invoke(new ClientConnectionArgs(Guid, Instance, PipeName, null, buffer: null));
             };
 
 #if NET40 || NET45
@@ -56,6 +73,64 @@ namespace GodSharp.Pipes.NamedPipes
             Instance.ConnectAsync(ConnectionTimeout).ContinueWith((e) => action());
 #endif
             OutputLogger?.Invoke($"{GetOutputPrefix()} connected to server.");
+        }
+
+        private void WaitInteraction()
+        {
+            Running = true;
+            WaitForReadInternal(WaitInteractionReadCallback);
+            WriteInternal(Guid.ToByteArray(), true);
+        }
+
+        private void WaitInteractionReadCallback(IAsyncResult result)
+        {
+            Guid guid = Guid.Empty;
+
+            try
+            {
+                lock (myLock)
+                {
+                    if (Stopping) return;
+                    int length = Instance.EndRead(result);
+
+                    if (length < 1)
+                    {
+                        Stop();
+                        return;
+                    }
+
+                    byte[] buffer = result.AsyncState as byte[];
+
+                    byte[] tmp = new byte[length];
+
+                    Buffer.BlockCopy(buffer, 0, tmp, 0, length);
+
+                    OutputLogger?.Invoke($"{GetOutputPrefix()} interacted read data {length} bytes.");
+
+                    try
+                    {
+                        guid = new Guid(tmp);
+                    }
+                    catch (Exception ex)
+                    {
+                        OnExceptionHandler(ex);
+                    }
+                }
+
+                if (guid != Guid)
+                {
+                    WaitInteraction();
+                }
+                else
+                {
+                    Interacted = true;
+                    WaitForRead();
+                }
+            }
+            catch (Exception ex)
+            {
+                OnExceptionHandler(ex);
+            }
         }
     }
 }

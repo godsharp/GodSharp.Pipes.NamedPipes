@@ -1,6 +1,6 @@
 ﻿<Project>
   <PropertyGroup Condition="'$(AssemblyName)'=='GodSharp.Pipes.NamedPipes'">
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>2019.4.21105.220</Version>
+    <Version>2019.4.21108.130</Version>
   </PropertyGroup>
 </Project>

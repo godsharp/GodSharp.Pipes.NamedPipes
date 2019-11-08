@@ -11,12 +11,12 @@ namespace ConsoleSample
 
         public Server()
         {
-            server = new NamedPipeServer(new NamedPipeServerOptions("namedpipe.default", OnReadCompleted, OnConnectionCompleted, OnStopCompleted, OnException, OnOutputLogging, readBytesSize:1024,maxNumberOfServerInstances: 254));
+            server = new NamedPipeServer(new NamedPipeServerOptions("namedpipe.default", OnReadCompleted, OnConnectionCompleted, OnInteractionCompleted, OnStopCompleted, OnException, OnOutputLogging, readBytesSize:1024,maxNumberOfServerInstances: 254));
             server.Start();
 
             Task.Run(() =>
             {
-                Task.Delay(2000).Wait();
+                Task.Delay(0).Wait();
                 RandomWrite();
             });
         }
@@ -28,7 +28,7 @@ namespace ConsoleSample
                 try
                 {
                     server.Write(Encoding.UTF8.GetBytes(DateTime.Now.ToString("HH:mm:ss.fff")));
-                    Task.Delay(0).Wait();
+                    Task.Delay(500).Wait();
                 }
                 catch (Exception ex)
                 {
@@ -37,21 +37,25 @@ namespace ConsoleSample
             }
         }
 
-        private void OnReadCompleted(NamedPipeConnectionArgs args)
+        private void OnReadCompleted(MasterConnectionArgs args)
         {
             System.Console.WriteLine($"NamedPipeMaster {args.Guid} / {args.PipeName} read data from client:{Encoding.UTF8.GetString(args.Buffer)}");
         }
 
-        private void OnConnectionCompleted(NamedPipeConnectionArgs args)
+        private void OnConnectionCompleted(MasterConnectionArgs args)
         {
         }
 
-        private void OnStopCompleted(NamedPipeConnectionArgs args)
+        private void OnInteractionCompleted(MasterConnectionArgs args)
+        {
+        }
+
+        private void OnStopCompleted(MasterConnectionArgs args)
         {
 
         }
 
-        private void OnException(NamedPipeConnectionArgs args)
+        private void OnException(MasterConnectionArgs args)
         {
 
         }

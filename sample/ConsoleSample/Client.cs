@@ -8,7 +8,7 @@ namespace ConsoleSample
 {
     public class Client
     {
-        int instanceNumber = 254;
+        int instanceNumber = 3;
         ConcurrentDictionary<Guid, NamedPipeClient> clients = new ConcurrentDictionary<Guid, NamedPipeClient>();
         ConcurrentDictionary<Guid, int> counters = new ConcurrentDictionary<Guid, int>();
 
@@ -17,7 +17,7 @@ namespace ConsoleSample
 
             for (int i = 0; i < instanceNumber; i++)
             {
-                NamedPipeClient client = new NamedPipeClient(new NamedPipeClientOptions("namedpipe.default", OnReadCompleted, OnConnectionCompleted, OnStopCompleted, OnException, OnOutputLogging,1024));
+                NamedPipeClient client = new NamedPipeClient(new NamedPipeClientOptions("namedpipe.default", OnReadCompleted, OnConnectionCompleted, OnInteractionCompleted, OnStopCompleted, OnException, OnOutputLogging,1024));
 
                 client.Start();
                 clients.TryAdd(client.Guid,client);
@@ -41,7 +41,7 @@ namespace ConsoleSample
             clients[guid].Write(Encoding.UTF8.GetBytes(DateTime.Now.ToString("HH:mm:ss.fff")));
         }
 
-        private void OnReadCompleted(NamedPipeConnectionArgs args)
+        private void OnReadCompleted(ClientConnectionArgs args)
         {
             System.Console.WriteLine($"NamedPipeClient {args.Guid} / {args.PipeName} read data from server:{Encoding.UTF8.GetString(args.Buffer)}");
             Write(args.Guid);
@@ -50,16 +50,20 @@ namespace ConsoleSample
             //if (counters[args.Guid] < 200) Write(args.Guid);
         }
 
-        private void OnConnectionCompleted(NamedPipeConnectionArgs args)
+        private void OnConnectionCompleted(ClientConnectionArgs args)
         {
         }
 
-        private void OnStopCompleted(NamedPipeConnectionArgs args)
+        private void OnInteractionCompleted(ClientConnectionArgs args)
+        {
+        }
+
+        private void OnStopCompleted(ClientConnectionArgs args)
         {
 
         }
 
-        private void OnException(NamedPipeConnectionArgs args)
+        private void OnException(ClientConnectionArgs args)
         {
 
         }

@@ -2,13 +2,14 @@
 
 namespace GodSharp.Pipes.NamedPipes
 {
-    public abstract class NamedPipeOptions
+    public abstract class NamedPipeOptions<TArgs> where TArgs : ConnectionArgs
     {
         public string PipeName { get; set; }
-        public Action<NamedPipeConnectionArgs> OnWaitForConnectionCompleted { get; set; }
-        public Action<NamedPipeConnectionArgs> OnStopCompleted { get; set; }
-        public Action<NamedPipeConnectionArgs> OnReadCompleted { get; set; }
-        public Action<NamedPipeConnectionArgs> OnException { get; set; }
+        public Action<TArgs> OnWaitForConnectionCompleted { get; set; }
+        public Action<TArgs> OnInteractionCompleted { get; set; }
+        public Action<TArgs> OnStopCompleted { get; set; }
+        public Action<TArgs> OnReadCompleted { get; set; }
+        public Action<TArgs> OnException { get; set; }
         public Action<string> OutputLogger { get; set; }
         public int ReadBytesSize { get; set; } = 1024 * 1024;
 
@@ -16,11 +17,12 @@ namespace GodSharp.Pipes.NamedPipes
         {
         }
 
-        public NamedPipeOptions(string pipeName, Action<NamedPipeConnectionArgs> onReadCompleted, Action<NamedPipeConnectionArgs> onWaitForConnectionCompleted, Action<NamedPipeConnectionArgs> onStopCompleted, Action<NamedPipeConnectionArgs> onException, Action<string> outputLogger, int readBytesSize = 1024 * 1024)
+        public NamedPipeOptions(string pipeName, Action<TArgs> onReadCompleted, Action<TArgs> onWaitForConnectionCompleted, Action<TArgs> onInteractionCompleted, Action<TArgs> onStopCompleted, Action<TArgs> onException, Action<string> outputLogger, int readBytesSize = 1024 * 1024)
         {
             PipeName = pipeName ?? throw new ArgumentNullException(nameof(pipeName));
             OnReadCompleted = onReadCompleted ?? throw new ArgumentNullException(nameof(onReadCompleted));
             OnWaitForConnectionCompleted = onWaitForConnectionCompleted;
+            OnInteractionCompleted = onInteractionCompleted;
             OnStopCompleted = onStopCompleted;
             OnException = onException;
             OutputLogger = outputLogger;
