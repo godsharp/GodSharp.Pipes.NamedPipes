@@ -46,7 +46,7 @@ namespace GodSharp.Pipes.NamedPipes
 
         protected internal override void OnExceptionHandler(Exception exception)
         {
-            throw new NotImplementedException();
+            OnException?.Invoke(new ClientConnectionArgs(Guid, Instance, PipeName, PipeServer, exception: exception));
         }
 
         internal protected override void WaitForConnection()
